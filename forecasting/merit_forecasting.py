@@ -1,0 +1,156 @@
+##########
+#Started by Rodrigo Cordova on April 4, 2018
+#Usage: Creation of an opacity file for the EHT for a set of given sites, times, etc. 
+
+#packages
+
+
+import os
+import numpy as np
+from amread import reader
+import astropy.table as tab
+import datetime as dt
+import argparse
+import dateutil.parser as dparser
+import matplotlib.pyplot as plt
+
+###function which reads in the data from am ion
+def gfs2file(lat, lon, h, date, ut, prod, datafile, newfile, outfile):
+    f = open(str(datafile),'w')
+    os.system( str('python gfs2am_v3.py ') + str( lat) +' ' + str( lon) +' '+ str( h) +' '+ str( date) +' '+ str( ut) +' ' + str( prod) +' ' + '>' + str(datafile))
+
+    f = open(str(datafile),'r')
+    newf = open(str(newfile),'w')
+    lines = f.readlines() # read old content
+
+    newf.write('f 221.1 GHz  221.1 GHz  50 MHz \n') # write new content at the beginning
+    newf.writelines(['output f GHz  tau neper tx none \n'])
+    newf.write('T0 2.7 K')
+
+    for line in lines: # write old content after new
+        newf.write(line)
+    newf.close()
+    f.close()
+
+
+    os.system('am' + ' ' + str(newfile) + '>' + str(outfile))
+    a,b,c =  reader(str(outfile), 'Tau', 'Transmittance')
+    os.system('rm ' +str(newfile) )
+    os.system('rm ' +str(datafile) )
+    os.system('rm ' +str(outfile) )
+    return a, b, c
+
+
+##all telesocopes
+
+scope_data = [['SMT',32.7016, -109.891, 3185],['LMT', 18.9858, -97.3147, 4640],['SMA', 19.8242, -155.478, 4080],['PV', 37.0661, -3.3925, 2850], ['SPT', -90, 0, 2800],['ALMA', -23.0193, -67.7532, 5058.7],['PDB', 44.6339, 5.9081, 2550],['GLT', 76.5 , -68.7 ,84]]
+
+scope_len = len(scope_data)
+###Design selection tool for which telescopes you want to measure for
+for i in np.arange(scope_len):
+    print str(i) + "= " + scope_data[i][0]
+
+print "the first argument are the indexes of telescopes we want to run the forecast tool for separated by commas, for the numbers listed above for all the array sites listed. To add more, go into code and add in the antenna name, latitude, longitude, and height."
+
+parser = argparse.ArgumentParser()
+parser.add_argument("telescopes",      help="array selection, integer numbers with spaces in between them",
+    type=str)
+parser.add_argument("start_date", help="day on which the forecast begins, YYYYMMDD structure",
+    type=int)
+parser.add_argument("start_hour", help="UT hour at which the forecast begins",
+    type=int)
+parser.add_argument("hours_future",  help=" how many hours into the future we look into (000h - 384h)",
+    type=int)
+parser.add_argument("prior",  help=" type yes or no directing if this calculation has been run previously and the relevant files are already in your directory, if they are, type yes, if not, type no, selecting yes will trigger the plotting routines",
+    type=str)
+args = parser.parse_args()
+##############
+telescope_list = []
+for i in np.arange(len(args.telescopes)):
+    try:
+        telescope_list.append(int(args.telescopes[i]))
+    except ValueError:
+        continue
+
+forecast_ants = []
+for i in np.arange(len(telescope_list)):
+    forecast_ants.append(scope_data[i])
+
+ant_len = len(forecast_ants)
+##############
+
+SMT   = tab.Table([[] ,[]   ,[]  ,[]  ,[]  , []], names = ('Date [YYYYMMDD]', 'Hour UT', 'Site', 'Frequency [GHz]', 'Opacity', 'Transmittance'), meta={'name': str('SMT')},dtype=('int', 'float64', 'str', 'float64', 'float64', 'float64'))
+LMT   = tab.Table([[] ,[]   ,[]  ,[]  ,[]  , []], names = ('Date [YYYYMMDD]', 'Hour UT', 'Site', 'Frequency [GHz]', 'Opacity', 'Transmittance'), meta={'name': str('LMT')},dtype=('int', 'float64', 'str', 'float64', 'float64', 'float64'))
+SMA   = tab.Table([[] ,[]   ,[]  ,[]  ,[]  , []], names = ('Date [YYYYMMDD]', 'Hour UT', 'Site', 'Frequency [GHz]', 'Opacity', 'Transmittance'), meta={'name': str('SMA')},dtype=('int', 'float64', 'str', 'float64', 'float64', 'float64'))
+PV    = tab.Table([[] ,[]   ,[]  ,[]  ,[]  , []], names = ('Date [YYYYMMDD]', 'Hour UT', 'Site', 'Frequency [GHz]', 'Opacity', 'Transmittance'), meta={'name': str('PV')},dtype=('int', 'float64', 'str', 'float64', 'float64', 'float64'))
+SPT   = tab.Table([[] ,[]   ,[]  ,[]  ,[]  , []], names = ('Date [YYYYMMDD]', 'Hour UT', 'Site', 'Frequency [GHz]', 'Opacity', 'Transmittance'), meta={'name': str('SPT')},dtype=('int', 'float64', 'str', 'float64', 'float64', 'float64'))
+ALMA  = tab.Table([[] ,[]   ,[]  ,[]  ,[]  , []], names = ('Date [YYYYMMDD]', 'Hour UT', 'Site', 'Frequency [GHz]', 'Opacity', 'Transmittance'), meta={'name': str('ALMA')},dtype=('int', 'float64', 'str', 'float64', 'float64', 'float64'))
+PDB   = tab.Table([[] ,[]   ,[]  ,[]  ,[]  , []], names = ('Date [YYYYMMDD]', 'Hour UT', 'Site', 'Frequency [GHz]', 'Opacity', 'Transmittance'), meta={'name': str('PDB')},dtype=('int', 'float64', 'str', 'float64', 'float64', 'float64'))
+GLT = tab.Table([[] ,[]   ,[]  ,[]  ,[]  , []], names = ('Date [YYYYMMDD]', 'Hour UT', 'Site', 'Frequency [GHz]', 'Opacity', 'Transmittance'), meta={'name': str('GLT')},dtype=('int', 'float64', 'str', 'float64', 'float64', 'float64'))
+#### Function for the creation of forecast file structure/ calling in the correct time/date/location
+def site_hour(date, ut, prod, hour):
+    SITES = np.chararray(ant_len, 6)
+    freqs = np.zeros((ant_len))
+    taus = np.zeros((ant_len))
+    trans = np.zeros((ant_len))
+    
+    for i in np.arange(ant_len):
+        f, t, tran    = gfs2file(forecast_ants[i][1], forecast_ants[i][2], forecast_ants[i][3], date, ut, str(prod), str(date)+str(ut)+str(forecast_ants[i][0])+'layers.amc', str(date)+str(ut)+str(forecast_ants[i][0])+'plugged.amc', str(date)+str(ut)+str(forecast_ants[i][0])+'.out')
+        freqs[i]= f
+        taus[i] = t
+        trans[i] = tran
+        SITES[i] = forecast_ants[i][0]
+    if taus[0] != 0.0:
+        print 'Atmospheric Model Tasks Complete for ' + str(date) + str(hour)
+
+        dates = np.array(np.zeros(len(freqs)))
+        hours = np.array(np.zeros(len(freqs)))
+
+        for i in np.arange(len(freqs)):
+            dates[i] = date
+            hours[i] = hour
+
+        t = tab.Table([dates, hours, SITES , freqs, taus, trans], names = ('Date [YYYYMMDD]', 'Hour UT', 'Site', 'Frequency [GHz]', 'Opacity', 'Transmittance'), meta={'name': str(date)})
+
+        for i in np.arange(ant_len):
+            index = np.where(t['Site'] == str(forecast_ants[i][0]))
+            eval(t['Site'][i]).add_row(t[index][0])
+############## initiating parameters
+days = [str(args.start_date)]
+
+day_len = len(days)
+b = int(args.hours_future) #Hours of forecasting to explore
+c = int(args.start_hour)#UT hour from which to start the forecasting
+a = np.arange(1,b)
+
+if args.prior == 'no':
+    for i in np.arange(len(a)):
+        if a[i] < 10:
+            site_hour(int((days[0])), c, 'f00' + str(a[i]),  c+int(a[i]))
+        if (a[i] < 100) & (a[i] >= 10):
+            site_hour(int((days[0])), c, 'f0' + str(a[i]),  c+int(a[i]))
+        if a[i] >= 100:
+            site_hour(int((days[0])), c, 'f' + str(a[i]),  c+int(a[i]))
+        print 'Hour ' + str(a[i]) + ' completed'
+
+    for i in np.arange(len(forecast_ants)):
+        eval(forecast_ants[i][0]).write(forecast_ants[i][0]+'_forecast_' + str(days[0])+ '_'+str(b+c)+'hrs'+'.dat', format='ascii')
+if args.prior == 'yes': ####this continues into the plitting routines, the files have already been created
+    forecasts = []
+    for i in np.arange(len(forecast_ants)):
+        forecast = tab.Table.read(forecast_ants[i][0]+'_forecast_' + str(days[0])+ '_'+str(b+c)+'hrs'+'.dat', format='ascii')
+    
+        x = forecast['Hour UT']
+        y = forecast['Opacity']
+        z = forecast['Date [YYYYMMDD]'][0]
+        plt.figure(i,figsize=(6,4))
+        plt.ylim(0,1)
+        plt.plot(x , y)
+        plt.xlabel('Hour [UT]')
+        plt.ylabel(r"Opacity ($\tau$ at 221.1 GHz)")
+        plt.title('Forecast Opacity for the '+ str(forecast_ants[i][0]) + ' for ' + str(z))
+        plt.plot()
+        forecasts.append(forecast)
+
+        ####still needs a bit of work to get it to keep all files just right
+

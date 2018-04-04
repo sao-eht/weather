@@ -158,7 +158,7 @@ for i in np.arange(scope_len):
     plt.ylabel(r"Opacity ($\tau$ at 221.1 GHz)")
     plt.title('Forecast Opacity for the '+ str(scope_data[i][0]) + ' for ' + str(z))
 
-plt.figure(6, figsize=(7,6))
+plt.figure(26, figsize=(7,6))
 plt.ylim(0,1)
 for i in np.arange(scope_len):
     x = eval(str(scope_data[i][0])+'_forecast')['Hour UT']
