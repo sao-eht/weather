@@ -13,6 +13,7 @@ import datetime as dt
 import argparse
 import dateutil.parser as dparser
 import matplotlib.pyplot as plt
+from math import floor
 
 ###function which reads in the data from am ion
 def gfs2file(lat, lon, h, date, ut, prod, datafile, newfile, outfile):
@@ -110,7 +111,8 @@ def forecasting(telescopes, start_date, start_hour,hours_future, prior):
 
     forecast_ants = []
     for i in np.arange(len(telescope_list)):
-        forecast_ants.append(scope_data[i])
+        forecast_ants.append(scope_data[telescope_list[i]])
+    print forecast_ants
 
     ant_len = len(forecast_ants)
     ##############
@@ -133,10 +135,17 @@ def forecasting(telescopes, start_date, start_hour,hours_future, prior):
 
             dates = np.array(np.zeros(len(freqs)))
             hours = np.array(np.zeros(len(freqs)))
-
+            
             for i in np.arange(len(freqs)):
-                dates[i] = date
-                hours[i] = hour
+                dates[i] = date + floor(int(prod[1:])/24.0)
+                hours[i] = hour - (24* floor(int(prod[1:])/24.0))
+
+            for i in np.arange(len(hours)):
+                if hours[i] >= 24:
+                    hours[i] = hours[i] - (24* floor(int(hours[i])/24.0))
+                    dates[i] = dates[i] + floor(int(hours[i])/24.0)
+                else:
+                    continue
 
             t = tab.Table([dates, hours, SITES , freqs, taus, trans], names = ('Date [YYYYMMDD]', 'Hour UT', 'Site', 'Frequency [GHz]', 'Opacity', 'Transmittance'), meta={'name': str(date)})
             for i in np.arange(length):
@@ -159,27 +168,57 @@ def forecasting(telescopes, start_date, start_hour,hours_future, prior):
             if a[i] >= 100:
                 site_hour(int((days[0])), c, 'f' + str(a[i]),  c+int(a[i]), ant_len, forecast_ants)
             print 'Hour ' + str(a[i]) + ' completed'
-
         for i in np.arange(len(forecast_ants)):
             eval(forecast_ants[i][0]).write(forecast_ants[i][0]+'_forecast_' + str(days[0])+ '_'+str(b+c)+'hrs'+'.dat', format='ascii')
+
+
     if prior == 'yes': ####this continues into the plotting routines, the files have already been created
         forecasts = []
         for i in np.arange(len(forecast_ants)):
             forecast = tab.Table.read(forecast_ants[i][0]+'_forecast_' + str(days[0])+ '_'+str(b+c)+'hrs'+'.dat', format='ascii')
-    
-            x = forecast['Hour UT']
+
             y = forecast['Opacity']
-            z = forecast['Date [YYYYMMDD]'][0]
+            x = forecast['Date [YYYYMMDD]'] + (forecast['Hour UT']/24.0)
             plt.figure(i,figsize=(6,4))
             plt.ylim(0,1)
             plt.plot(x , y)
-            plt.xlabel('Hour [UT]')
+            plt.xlabel('Date [YYYYMMDD.Hour]')
             plt.ylabel(r"Opacity ($\tau$ at 221.1 GHz)")
-            plt.title('Forecast Opacity for the '+ str(forecast_ants[i][0]) + ' for ' + str(z))
+            plt.title('Forecast Opacity for the '+ str(forecast_ants[i][0]) + ' for ' + str(forecast['Date [YYYYMMDD]'][0]))
+        
             
             forecasts.append(forecast)
+        
+        plt.figure(21, figsize=(8,6))
+        for i in np.arange(len(forecasts)):
+            y = forecasts[i]['Opacity']
+            x = forecasts[i]['Date [YYYYMMDD]'] + (forecasts[i]['Hour UT']/24.0)
+            plt.plot(x , y, label = str(forecast_ants[i][0]))
+            plt.xlabel('Date [YYYYMMDD.Hour]')
+            plt.ylabel(r"Opacity ($\tau$ at 221.1 GHz)")
+            plt.title('Forecast Opacity for the EHT array for ' + str(forecasts[i]['Date [YYYYMMDD]'][0]))
+        plt.legend()
+
         plt.show()
         return forecasts
 
-        ####still needs a bit of work to get it to keep all files just right
 
+'''
+telescope_list = []
+for i in np.arange(len(telescopes)):
+    try:
+        telescope_list.append(int(telescopes[i]))
+    except ValueError:
+        continue
+print telescope_list
+
+forecast_ants = []
+for i in np.arange(len(telescope_list)):
+    forecast_ants.append(scope_data[telescope_list[i]])
+ant_len = len(forecast_ants)
+print forecast_ants
+
+for i in np.arange(len(forecast_ants)):
+    eval(forecast_ants[i][0]).write(forecast_ants[i][0]+'_forecast_' + str(days[0])+ '_'+str(b+c)+'hrs'+'.dat', format='ascii')
+
+    '''
